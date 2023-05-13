@@ -1,28 +1,27 @@
-# This is a basic workflow to help you get started with Actions
+name: Build docs
 
-name: CI fmt
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
   fmt:
-    name: Rustfmt
+    name: Docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+          fetch-depth: 0
+      - run: |
+          cargo doc
+          export FIRST_PACKAGE=`cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | .name'`
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=$FIRST_PACKAGE/index.html\">" > target/doc/index.html
+          cp -r target/doc ./tmpdocs
+          git config user.email "you@example.com"
+          git config user.name "CI"
+          git checkout gh-pages
+          rm -rf ./docs
+          mv tmpdocs docs
+          git add docs
+          git commit -m "Update docs"
+          git push
